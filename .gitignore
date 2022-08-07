@@ -4,4 +4,6 @@
 **.user
 **/x64
 **/.vs
+source/**.dll
+**.log
 releases

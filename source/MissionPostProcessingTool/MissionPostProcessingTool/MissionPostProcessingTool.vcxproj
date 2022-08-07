@@ -149,6 +149,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CsvFileTools.h" />
+    <ClInclude Include="Logger.h" />
     <ClInclude Include="LuaWrapper.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="MizFileTools.h" />
@@ -156,6 +157,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CsvFileTools.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="LuaWrapper.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MizFileTools.cpp" />

@@ -15,6 +15,7 @@ extern "C" {
 #include "CsvFileTools.h"
 #include "MizFileTools.h"
 #include "LuaWrapper.h"
+#include "Logger.h"
 
 constexpr const char* mainLuaPath = "scripts\\main.lua";
 constexpr const char* coreLuaPath = "scripts\\core\\core.lua";
@@ -68,7 +69,7 @@ bool CSVExists(const std::string &mizPath, std::filesystem::path &output) {
 int main(int argc, char* argv[]) {
 
 	if (argc < 2)return 0;
-
+	Logger logger("MissionPostProcessingTool.log");
 	auto missionFilePath = std::string(argv[1]);
 
 	std::string missionFileContent;
@@ -84,6 +85,7 @@ int main(int argc, char* argv[]) {
 
 		if (!MizFileTools::overwriteMissionData(missionFilePath, newMissionFileContent))return -2;
 	}
+
 
 	return 0;
 }
