@@ -5,5 +5,9 @@
 **/x64
 **/.vs
 source/**.dll
+**.miz
+source/**.csv
+source/MissionPostProcessingTool/MissionPostProcessingTool/backups
+source/MissionPostProcessingTool/MissionPostProcessingTool/input
 **.log
 releases

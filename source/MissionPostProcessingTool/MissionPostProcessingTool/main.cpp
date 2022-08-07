@@ -21,71 +21,98 @@ constexpr const char* mainLuaPath = "scripts\\main.lua";
 constexpr const char* coreLuaPath = "scripts\\core\\core.lua";
 constexpr const char* inputCsvDir = "\\input\\";
 
+class MainContext
+{
+	std::shared_ptr<Logger> mLogger = std::make_shared<Logger>("MissionPostProcessingTool.log");
+	std::shared_ptr <MizFileTools> mMiz = std::make_shared<MizFileTools>(mLogger);
+	std::shared_ptr <CsvFileTools> mCsv = std::make_shared<CsvFileTools>(mLogger);
+public:	
 
-bool LuaApplyScript(const std::filesystem::path& csvPath, const std::string& missionData, std::string& newMissionData){
+	std::shared_ptr <MizFileTools> Miz() const { return mMiz; }
+	std::shared_ptr <CsvFileTools> Csv() const { return mCsv; }
 
-	LuaWrapper lw;
+	bool LuaApplyScript(const std::filesystem::path& csvPath, const std::string& missionData, std::string& newMissionData) const{
 
-	std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
-	std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
+		LuaWrapper lw(mLogger,mCsv);
 
-	lw.RunScript(missionData);//add mission global object
+		std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
+		std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
 
-	if (!lw.RunFile(corePath.string())) return false;
-	if(!lw.RunFile(path.string())) return false;
+		lw.RunScript(missionData);//add mission global object
 
-	return lw.RunCsvHandler("applyCsv", std::filesystem::absolute(csvPath).string(), newMissionData);
-}
+		if (!lw.RunFile(corePath.string())) return false;
+		if (!lw.RunFile(path.string())) return false;
 
-bool LuaExtractScript(const std::filesystem::path& csvPath, const std::string& missionData) {
+		return lw.RunCsvHandler("applyCsv", std::filesystem::absolute(csvPath).string(), newMissionData);
+	}
 
-	LuaWrapper lw;
+	bool LuaExtractScript(const std::filesystem::path& csvPath, const std::string& missionData) const{
 
-	std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
-	std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
+		LuaWrapper lw(mLogger,mCsv);
 
-	lw.RunScript(missionData); //add mission global object
+		std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
+		std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
 
-	if (!lw.RunFile(corePath.string())) return false;
-	if (!lw.RunFile(path.string())) return false;
+		lw.RunScript(missionData); //add mission global object
 
-	return lw.RunCsvProducer("extractCsv", std::filesystem::absolute(csvPath).string());
-}
+		if (!lw.RunFile(corePath.string())) return false;
+		if (!lw.RunFile(path.string())) return false;
 
-bool CSVExists(const std::string &mizPath, std::filesystem::path &output) {
-	auto inputPath = std::filesystem::path(mizPath);
+		return lw.RunCsvProducer("extractCsv", std::filesystem::absolute(csvPath).string());
+	}
 
-	output = std::filesystem::current_path();
-	output += inputCsvDir;
+	bool CSVExists(const std::string& mizPath, std::filesystem::path& output) const{
+		auto inputPath = std::filesystem::path(mizPath);
 
-	if (!std::filesystem::exists(output)) std::filesystem::create_directory(output);
+		output = std::filesystem::current_path();
+		output += inputCsvDir;
 
-	output += inputPath.stem();
-	output += ".csv";
+		if (!std::filesystem::exists(output)) std::filesystem::create_directory(output);
 
-	return std::filesystem::exists(output);
-}
+		output += inputPath.stem();
+		output += ".csv";
+
+		return std::filesystem::exists(output);
+	}
+
+	int onError(const std::string& failedAction, const std::string& toLog, int code) const{
+		std::string printMessage = "Error occurred " + failedAction + ". ";
+		std::cout << printMessage << std::endl
+				  << "See log for details." << std::endl;
+
+		std::string logMessage = printMessage + "\nStopcode " + std::to_string(code) + ". ";
+		if (!toLog.empty()) logMessage += "\nDetails: " + toLog;
+		mLogger->Error(logMessage);
+		return code;
+	}
+};
 
 int main(int argc, char* argv[]) {
 
 	if (argc < 2)return 0;
-	Logger logger("MissionPostProcessingTool.log");
 	auto missionFilePath = std::string(argv[1]);
+
+	MainContext mc;	
 
 	std::string missionFileContent;
 
-	if (!MizFileTools::extractMissionData(missionFilePath, missionFileContent))return -1;
+	try {
+		if (!mc.Miz()->extractMissionData(missionFilePath, missionFileContent)) return mc.onError("while extracting mission data", "", -1);
 
-	if (std::filesystem::path csvPath; !CSVExists(missionFilePath, csvPath)) LuaExtractScript(csvPath, missionFileContent);
-	else {
+		if (std::filesystem::path csvPath; !mc.CSVExists(missionFilePath, csvPath)) 
+			if(!mc.LuaExtractScript(csvPath, missionFileContent)) return mc.onError("while generating csv", "", -2);
+		else {
 
-		MizFileTools::backupFile(missionFilePath);
-		std::string newMissionFileContent;
-		if(!LuaApplyScript(csvPath, missionFileContent, newMissionFileContent)) return -3;
+			mc.Miz()->backupFile(missionFilePath);
+			std::string newMissionFileContent;
+			if (!mc.LuaApplyScript(csvPath, missionFileContent, newMissionFileContent)) return mc.onError("while updating mission data", "", -3);
 
-		if (!MizFileTools::overwriteMissionData(missionFilePath, newMissionFileContent))return -2;
+			if (!mc.Miz()->overwriteMissionData(missionFilePath, newMissionFileContent)) return mc.onError("while saving mission data", "", -4);
+		}
 	}
-
+	catch (std::exception ex){
+		return mc.onError("unexpectedly", ex.what(), -4);
+	}
 
 	return 0;
 }

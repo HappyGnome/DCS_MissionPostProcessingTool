@@ -4,9 +4,12 @@
 #include <fstream>
 
 #include "CsvFileTools.h"
+#include "Logger.h"
+
+CsvFileTools::CsvFileTools(std::shared_ptr<Logger> logger):mLogger(logger,"CSV IO") {}
 
 //read csv data and leave it as a table on top of lua stack
-std::vector<CsvEntry> CsvFileTools::SplitCSVLine(const std::string& line) {
+std::vector<CsvEntry> CsvFileTools::SplitCSVLine(const std::string& line) const{
 
 	std::vector<CsvEntry> ret;
 
@@ -51,7 +54,7 @@ std::vector<CsvEntry> CsvFileTools::SplitCSVLine(const std::string& line) {
 	return ret;
 }
 
-std::string CsvFileTools::EscapeCSVEntry(const std::string& input, bool forceEscape) {
+std::string CsvFileTools::EscapeCSVEntry(const std::string& input, bool forceEscape) const{
 	std::string ret = "";
 	bool encloseInQuotes = forceEscape;
 	for (const char& c : input) {

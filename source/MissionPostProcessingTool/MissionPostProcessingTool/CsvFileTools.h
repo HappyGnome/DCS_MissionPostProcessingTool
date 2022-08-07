@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "Logger.h"
+
 struct CsvEntry {
 	std::string str;
 	bool literal = false;
@@ -13,9 +15,11 @@ struct CsvEntry {
 };
 
 class CsvFileTools {
+	LoggerSection mLogger;
 public:
-	static std::string EscapeCSVEntry(const std::string& input, bool forceEscape = false);
-	static std::vector<CsvEntry> SplitCSVLine(const std::string& line);
+	explicit CsvFileTools(std::shared_ptr<Logger> logger);
+	std::string EscapeCSVEntry(const std::string& input, bool forceEscape = false) const;
+	std::vector<CsvEntry> SplitCSVLine(const std::string& line) const;
 };
 
 #endif

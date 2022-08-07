@@ -15,36 +15,21 @@ std::string Logger::EventLevelToString(EventLevel l){
 Logger::LogItem::LogItem(EventLevel level, const std::string& message) :mLevel(level), mMessage(message) {
 	mWhen = std::chrono::system_clock::now();
 }
-/*
-Logger::LogItem::LogItem(const LogItem& other) = default;
-Logger::LogItem::LogItem(LogItem&& other) noexcept:
-											mLevel(std::exchange(other.mLevel, nullptr)),
-											mMessage(std::exchange(other.mMessage, nullptr)),
-											mWhen(std::exchange(other.mWhen, nullptr)) {}
-
-Logger::LogItem::~LogItem() = default;
-Logger::LogItem& Logger::LogItem::operator= (const LogItem& other) {
-	return *this = LogItem(other);
-}
-Logger::LogItem& Logger::LogItem::operator= (LogItem&& other) noexcept {
-	std::swap(mLevel, other.mLevel);
-	std::swap(mMessage, other.mMessage);
-	std::swap(mWhen, other.mWhen);
-	return *this;
-}*/
 
 //-----------------------------------------------------------------------------------------------------------------------
 void Logger::Work() {
 	std::ofstream file(mFilePath, std::ios_base::trunc);
 	if (!file.good()) return;
 
+	bool kill = false;
 	Info("Logging thread started");
-	while (true) {
+	while (!kill) {
 		std::list<LogItem> messages;
 		{
 			std::unique_lock lg(mMessagesMutex);
 			mMessagesCV.wait(lg, [this] {return !mMessages.empty() || mKill; });
 			std::swap(messages, mMessages);
+			kill = mKill;
 		}
 		
 		for (const LogItem& li : messages) {			
@@ -55,9 +40,8 @@ void Logger::Work() {
 			std::time_t baseTime = std::chrono::system_clock::to_time_t(minutes);
 			gmtime_s(&timeBuf, &baseTime);
 
-			file << std::put_time(&timeBuf, "%F %H:%M:")<<std::setprecision(3) << (float)mils.count()/1000.0f << "|" << Logger::EventLevelToString(li.mLevel) << "|" << li.mMessage << std::endl;
+			file << std::put_time(&timeBuf, "%F %H:%M:")<<std::setprecision(5) << (float)mils.count()/1000.0f << "\t|" << Logger::EventLevelToString(li.mLevel) << "\t|" << li.mMessage << std::endl;
 		}
-		if (mKill) break;
 	}
 	file.flush();
 	file.close();

@@ -24,13 +24,8 @@ class Logger {
 		std::chrono::time_point<std::chrono::system_clock> mWhen;
 	
 		explicit LogItem(EventLevel level, const std::string& message);
-		/*
-		LogItem(const LogItem& other);
-		LogItem(LogItem&& other) noexcept;
-		~LogItem();
-		LogItem& operator= (const LogItem& other);
-		LogItem& operator= (LogItem&& other) noexcept;*/
 	};
+
 	std::list<LogItem> mMessages;
 	std::mutex mMessagesMutex;
 	std::thread mMessagesHandler;

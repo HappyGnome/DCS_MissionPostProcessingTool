@@ -12,7 +12,7 @@ extern "C" {
 #include "CsvFileTools.h"
 #include "StringHelpers.h"
 
-LuaWrapper::LuaWrapper() {
+LuaWrapper::LuaWrapper(std::shared_ptr<Logger> logger, std::shared_ptr<CsvFileTools> csvt):mLogger(logger,"LUA"), mCsvTools(csvt) {
 	mL = lua_open();
 
 	luaopen_base(mL);
@@ -27,12 +27,28 @@ lua_State* LuaWrapper::L() {
 	return mL;
 }
 
+void LuaWrapper::LogLuaError() {
+	if (lua_isstring(mL, -1)) {
+		const char* msg = lua_tostring(mL, -1);
+		lua_pop(mL, 1);
+		mLogger.Error(msg);
+	}
+}
+
 bool LuaWrapper::RunFile(const std::string& path) {
-	return !luaL_dofile(mL, path.c_str());
+	if (!luaL_dofile(mL, path.c_str())) return true;
+	else {
+		LogLuaError();
+		return false;
+	}
 }
 
 bool LuaWrapper::RunScript(const std::string& script) {
-	return !luaL_dostring(mL, script.c_str());
+	if (!luaL_dostring(mL, script.c_str()))return true;
+	else {
+		LogLuaError();
+		return false;
+	}
 }
 
 bool LuaWrapper::RunCsvProducer(const std::string& functionName, const std::string& outputPath) {
@@ -41,7 +57,11 @@ bool LuaWrapper::RunCsvProducer(const std::string& functionName, const std::stri
 		lua_pop(mL, 1);
 		return false;
 	}
-	lua_call(mL, 0, 1);
+	if (lua_pcall(mL, 0, 1, 0))
+	{
+		LogLuaError();
+		return false;
+	}
 	return ExtractCsvContent(outputPath);
 }
 
@@ -57,7 +77,10 @@ bool LuaWrapper::RunCsvHandler(const std::string& functionName, const std::strin
 		lua_pop(mL, 1);
 		return false;
 	}
-	lua_call(mL, 1, 1);
+	if (lua_pcall(mL, 1, 1, 0)) {
+		LogLuaError();
+		return false;
+	}
 	
 	if (!lua_isstring(mL, -1)) {
 		lua_pop(mL, 1);
@@ -69,44 +92,6 @@ bool LuaWrapper::RunCsvHandler(const std::string& functionName, const std::strin
 
 	return true;
 }
-
-/*std::string escapeString(const std::string& input) {
-	std::string ret = "";
-	for (const char& c : input) {
-		if(c=='\"'|| c=='\n'||c=='\r')
-	}
-}
-
-//pop top item from lua stack, convert to string and append to output
-bool AppendObjToStr(lua_State *L, const std::string &indent, std::string& output) {
-	if (lua_isnumber(L, -1)) output += std::to_string(lua_tonumber(L, -1));
-	else if (lua_isstring(L, -1)) output += std::to_string(lua_tostring(L, -1));
-	else if ()
-	lua_pop(L, 1);
-	return true;
-}*
-
-bool LuaWrapper::GlobalToString(const std::string& global, std::string& output) {
-	output = global + " = ";
-
-	lua_getfield(mL, LUA_GLOBALSINDEX, global.c_str());
-
-
-	if (!lua_isfunction(mL, -1)) {
-		lua_pop(mL, 1);
-		return false;
-	}
-	if (!CsvFileToLua(csvPath))
-	{
-		lua_pop(mL, 1);
-		return false;
-	}
-	lua_call(mL, 1, 0);
-
-	return true;
-}*/
-
-
 
 //pop 2D array from Lua and output to a csv file, overwriting existing content
 bool LuaWrapper::ExtractCsvContent(const std::string& filePath) {
@@ -122,7 +107,7 @@ bool LuaWrapper::ExtractCsvContent(const std::string& filePath) {
 		while (lua_next(mL, -2) != 0) {//iterate columns
 			if (!newLine) output += ",";			
 			
-			if (int type = lua_type(mL, -1); type == LUA_TSTRING) output += CsvFileTools::EscapeCSVEntry(lua_tostring(mL, -1),true);
+			if (int type = lua_type(mL, -1); type == LUA_TSTRING) output += mCsvTools->EscapeCSVEntry(lua_tostring(mL, -1),true);
 			else if (type == LUA_TNUMBER) output += std::to_string(lua_tonumber(mL, -1));
 			else if (type == LUA_TBOOLEAN) output += str_helpers::BToS(lua_toboolean(mL, -1));
 			else if (type == LUA_TNIL) output += str_helpers::NilToS();
@@ -155,7 +140,7 @@ bool LuaWrapper::CsvFileToLua(const std::string& filePath) {
 		std::string line;
 		std::getline(csv, line);
 		if (line == "") continue;
-		std::vector<CsvEntry> toks = CsvFileTools::SplitCSVLine(line);
+		std::vector<CsvEntry> toks = mCsvTools->SplitCSVLine(line);
 
 		lua_newtable(mL);
 

@@ -9,7 +9,11 @@ extern "C" {
 #include <zip.h>
 }
 
-bool MizFileTools::backupFile(const std::string& mizPath){
+#include "Logger.h"
+
+MizFileTools::MizFileTools(std::shared_ptr<Logger> logger) : mLogger(logger,"MIZ IO") {}
+
+bool MizFileTools::backupFile(const std::string& mizPath) const {
 
 	auto inputPath = std::filesystem::path(mizPath);
 
@@ -32,15 +36,22 @@ bool MizFileTools::backupFile(const std::string& mizPath){
 	std::error_code error;
 	std::filesystem::copy(inputPath, outPath, error);
 
-	return error.value() == 0;
+	if (error.value() == 0) return true;
+	else {
+		mLogger.Error(error.message());
+		return false;
+	}
 }
 
-bool MizFileTools::extractMissionData(const std::string& mizPath, std::string& output) {
+bool MizFileTools::extractMissionData(const std::string& mizPath, std::string& output) const{
 
 	int error = 0;
 	zip_t* arch = zip_open(mizPath.c_str(), ZIP_RDONLY, &error);
 
-	if (error) return false;
+	if (error) {
+		mLogger.Error("libzip error code " + std::to_string(error) + " when opening " + mizPath);
+		return false;
+	}
 
 	zip_file_t* missionFile = zip_fopen(arch, "mission", 0);
 
@@ -56,15 +67,20 @@ bool MizFileTools::extractMissionData(const std::string& mizPath, std::string& o
 	zip_fclose(missionFile);
 	zip_close(arch);
 
+	mLogger.Info(mizPath + " read. Mission data length: " + std::to_string(output.length()));
+
 	return true;
 }
 
-bool MizFileTools::overwriteMissionData(const std::string& mizPath, const std::string& newMizData) {
+bool MizFileTools::overwriteMissionData(const std::string& mizPath, const std::string& newMizData) const{
 
 	int error = 0;
 	zip_t* arch = zip_open(mizPath.c_str(), 0, &error);
 
-	if (error) return false;
+	if (error) {
+		mLogger.Error("libzip error code " + std::to_string(error) + " when opening " + mizPath);
+		return false;
+	}
 
 	const char* buf = newMizData.c_str();
 
@@ -76,5 +92,7 @@ bool MizFileTools::overwriteMissionData(const std::string& mizPath, const std::s
 	}
 
 	zip_close(arch);
+
+	mLogger.Info(mizPath + " updated. New mission data length: " + std::to_string(newMizData.length()));
 	return true;
 }

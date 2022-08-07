@@ -11,14 +11,20 @@ extern "C" {
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include "Logger.h"
+#include "CsvFileTools.h"
 
 class LuaWrapper {
 	lua_State* mL;
+	LoggerSection mLogger;
+	std::shared_ptr<CsvFileTools> mCsvTools;
+
+	void LogLuaError();
 public:
 	bool ExtractCsvContent(const std::string& filePath);
 
 
-	LuaWrapper();
+	explicit LuaWrapper(std::shared_ptr<Logger> logger, std::shared_ptr<CsvFileTools> csvt);
 	~LuaWrapper();
 	lua_State* L();
 
@@ -29,7 +35,6 @@ public:
 	bool RunCsvProducer(const std::string& functionName, const std::string& outputPath);
 
 	bool RunCsvHandler(const std::string& functionName, const std::string& csvPath, std::string& output);
-	//bool GlobalToString(const std::string& global, std::string& output);
 };
 
 #endif
