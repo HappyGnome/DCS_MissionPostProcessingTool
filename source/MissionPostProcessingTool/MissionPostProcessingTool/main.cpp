@@ -271,6 +271,8 @@ int main(int argc, char* argv[]) {
 	if (argc < 2) {
 		std::cout << "Enter path to .miz file: ";
 		std::getline(std::cin,missionFilePath);
+		if (!missionFilePath.empty() && missionFilePath.front() == '\"')missionFilePath = missionFilePath.substr(1, missionFilePath.length() - 1);
+		if (!missionFilePath.empty() && missionFilePath.back() == '\"')missionFilePath = missionFilePath.substr(0, missionFilePath.length() - 1);
 	}
 	else missionFilePath = std::string(argv[1]);
 
