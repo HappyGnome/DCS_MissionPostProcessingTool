@@ -34,16 +34,17 @@ Extract a 2D table of numbers and strings to be saved in a csv file
 --]]
 extractCsv = function()
 	local ret = {{"Country","Type","Radio #","Preset 1","Preset 2","..."}}
+	local once = {}
 	for coaK,coaV in pairs(mission.coalition) do
 		for ctryI,ctryV in ipairs(coaV.country) do
 			if ctryV.plane then
 				for gpI,gpV in ipairs(ctryV.plane.group) do
-					appendRadioChannelsRow(ret,gpV, ctryV.name)
+					appendRadioChannelsRow(ret,gpV, ctryV.name, once)
 				end
 			end
 			if ctryV.helicopter then
 				for gpI,gpV in ipairs(ctryV.helicopter.group) do
-					appendRadioChannelsRow(ret,gpV, ctryV.name)
+					appendRadioChannelsRow(ret,gpV, ctryV.name, once)
 				end
 			end
 		end
@@ -52,15 +53,22 @@ extractCsv = function()
 end
 
 ------------------------------------------
-appendRadioChannelsRow = function(csvData,group, ctryName)
+appendRadioChannelsRow = function(csvData,group, ctryName, once)
 	for unitI,unitV in ipairs(group.units) do
-		if unitV.skill == "Client" or unitV.skill == "Player" then
+		if unitV.skill == "Client" or unitV.skill == "Player" and unitV.Radio then
 			for radioI,radioV in ipairs(unitV.Radio) do
 				local row = {ctryName,unitV.type,radioI}
-				for channelI,channelV in ipairs(radioV.channels) do
-					row[#row + 1] = channelV
+				
+				if not once[row[1]] then once[row[1]] ={} end
+				if not once[row[1]][row[2]] then once[row[1]][row[2]] ={} end
+				
+				if not once[row[1]][row[2]][row[3]] then
+					for channelI,channelV in ipairs(radioV.channels) do
+						row[#row + 1] = channelV
+					end
+					csvData[#csvData + 1] = row;
+					once[row[1]][row[2]][row[3]] = true
 				end
-				csvData[#csvData + 1] = row;
 			end
 		end
 	end

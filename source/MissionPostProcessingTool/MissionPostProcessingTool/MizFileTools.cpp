@@ -13,21 +13,17 @@ extern "C" {
 
 MizFileTools::MizFileTools(std::shared_ptr<Logger> logger) : mLogger(logger,"MIZ IO") {}
 
-bool MizFileTools::backupFile(const std::string& mizPath) const {
+bool MizFileTools::backupFile(const std::string& mizPath, const std::filesystem::path& basePath) const {
 
 	auto inputPath = std::filesystem::path(mizPath);
 
-	std::filesystem::path basePath = std::filesystem::current_path();
-	basePath += "\\backups\\";
-
 	if (!std::filesystem::exists(basePath)) std::filesystem::create_directory(basePath);
 
-	basePath += inputPath.filename();
-	basePath += ".bkp";
+	std::filesystem::path bkpPath = basePath/(inputPath.filename().string() +".bkp");
 
 	std::filesystem::path outPath;
 	for (int i = 0;; i++) {
-		outPath = basePath;
+		outPath = bkpPath;
 		outPath += std::to_string(i);
 
 		if (!std::filesystem::exists(outPath)) break;
@@ -45,11 +41,18 @@ bool MizFileTools::backupFile(const std::string& mizPath) const {
 
 bool MizFileTools::extractMissionData(const std::string& mizPath, std::string& output) const{
 
-	int error = 0;
-	zip_t* arch = zip_open(mizPath.c_str(), ZIP_RDONLY, &error);
+	zip_error_t error = {0,0};
+	zip_source_t* source = zip_source_win32a_create(mizPath.c_str(), 0, 0, &error);
 
-	if (error) {
-		mLogger.Error("libzip error code " + std::to_string(error) + " when opening " + mizPath);
+	if (error.zip_err || error.sys_err) {
+		mLogger.Error("libzip error code " + std::to_string(error.zip_err) +"/" + std::to_string(error.sys_err) + " when opening " + mizPath);
+		return false;
+	}
+
+	zip_t* arch = zip_open_from_source(source, ZIP_RDONLY, &error);
+
+	if (error.zip_err || error.sys_err) {
+		mLogger.Error("libzip error code " + std::to_string(error.zip_err) + "/" + std::to_string(error.sys_err) + " when opening " + mizPath);
 		return false;
 	}
 
@@ -74,11 +77,18 @@ bool MizFileTools::extractMissionData(const std::string& mizPath, std::string& o
 
 bool MizFileTools::overwriteMissionData(const std::string& mizPath, const std::string& newMizData) const{
 
-	int error = 0;
-	zip_t* arch = zip_open(mizPath.c_str(), 0, &error);
+	zip_error_t error = {0,0};
+	zip_source_t* source = zip_source_win32a_create(mizPath.c_str(), 0, 0, &error);
 
-	if (error) {
-		mLogger.Error("libzip error code " + std::to_string(error) + " when opening " + mizPath);
+	if (error.zip_err || error.sys_err) {
+		mLogger.Error("libzip error code " + std::to_string(error.zip_err) + "/" + std::to_string(error.sys_err) + " when opening " + mizPath);
+		return false;
+	}
+
+	zip_t* arch = zip_open_from_source(source, 0, &error);
+
+	if (error.zip_err || error.sys_err) {
+		mLogger.Error("libzip error code " + std::to_string(error.zip_err) + "/" + std::to_string(error.sys_err) + " when opening " + mizPath);
 		return false;
 	}
 

@@ -6,6 +6,7 @@
 #include "conio.h"
 #include<shlwapi.h>
 #include<shlobj.h>
+#include <Libloaderapi.h>
 
 extern "C" {
 	#include <zip.h>
@@ -22,10 +23,11 @@ extern "C" {
 #include "LuaWrapper.h"
 #include "Logger.h"
 
-constexpr const char* mainLuaDir = ".\\scripts\\";
+constexpr const char* mainLuaDir = "scripts\\";
 constexpr const char* coreLuaPath = "scripts\\core\\core.lua";
-constexpr const char* inputCsvDir = "\\input\\";
+constexpr const char* inputCsvDir = "input\\";
 constexpr const char* configLuaPath = "config.lua";
+constexpr const char* backupsPath = "backups\\";
 
 struct ErrorCodes {
 	static constexpr int LOAD_CONFIG = -1;
@@ -42,22 +44,43 @@ struct ErrorCodes {
 
 class MainContext
 {
-	std::shared_ptr<Logger> mLogger = std::make_shared<Logger>("MissionPostProcessingTool.log");
-	std::shared_ptr <MizFileTools> mMiz = std::make_shared<MizFileTools>(mLogger);
-	std::shared_ptr <CsvFileTools> mCsv = std::make_shared<CsvFileTools>(mLogger);
-
+	std::shared_ptr<Logger> mLogger;
+	std::shared_ptr <MizFileTools> mMiz;
+	std::shared_ptr <CsvFileTools> mCsv;
+	std::filesystem::path mExeDir;
 	AppConfig mConfig;
 public:	
 
 	std::shared_ptr <MizFileTools> Miz() const { return mMiz; }
 	std::shared_ptr <CsvFileTools> Csv() const { return mCsv; }
 
+	MainContext() {
+		char buf[1024];
+		GetModuleFileNameA(nullptr, buf, sizeof(buf));
+		std::filesystem::path exeDir(buf);
+		mExeDir = exeDir.remove_filename();
+		std::filesystem::path logPath = MakeRelativeToExe("MissionPostProcessingTool.log");
+
+		mLogger = std::make_shared<Logger>(logPath.string());
+		mMiz = std::make_shared<MizFileTools>(mLogger);
+		mCsv = std::make_shared<CsvFileTools>(mLogger);
+	}
+
+	void MakeRelativeToExe(std::filesystem::path& path) const{
+		if (path.is_absolute()) return;
+
+		path = mExeDir / path;
+	}
+	std::filesystem::path MakeRelativeToExe(const std::string& path) const{
+		auto ret = std::filesystem::path(mExeDir);
+		return ret.append(path);
+	}
 	bool LuaApplyScript(const std::filesystem::path& csvPath, const std::filesystem::path& mainLuaPath, const std::string& missionData, std::string& newMissionData) const{
 
 		LuaWrapper lw(mLogger,mCsv);
 
 		std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
-		std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
+		std::filesystem::path corePath = MakeRelativeToExe(coreLuaPath);
 
 		lw.RunScript(missionData);//add mission global object
 
@@ -72,19 +95,19 @@ public:
 		LuaWrapper lw(mLogger,mCsv);
 
 		std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
-		std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
+		std::filesystem::path corePath = MakeRelativeToExe(coreLuaPath);
 
 		lw.RunScript(missionData); //add mission global object
 
 		if (!lw.RunFile(corePath.string())) return false;
 		if (!lw.RunFile(path.string())) return false;
 
-		return lw.RunCsvProducer("extractCsv", std::filesystem::absolute(csvPath).string());
+		return lw.RunCsvProducer("extractCsv", std::filesystem::path(csvPath).string());
 	}
 
 	bool GetMainLuaOptions(std::vector<std::string>& output) const {
 
-		std::filesystem::path dir = std::filesystem::relative(mainLuaDir);
+		std::filesystem::path dir = MakeRelativeToExe(mainLuaDir);
 		if (!std::filesystem::exists(dir))return false;
 		for (const auto& it : std::filesystem::directory_iterator(dir)) {
 			const auto& path = it.path();
@@ -98,8 +121,7 @@ public:
 	bool CSVExists(const std::string& mizPath, std::filesystem::path& output) const{
 		auto inputPath = std::filesystem::path(mizPath);
 
-		output = std::filesystem::current_path();
-		output += inputCsvDir;
+		output = MakeRelativeToExe(inputCsvDir);
 
 		if (!std::filesystem::exists(output)) std::filesystem::create_directory(output);
 
@@ -121,7 +143,7 @@ public:
 	}
 
 	bool GetConfig(){		
-		std::filesystem::path path = std::filesystem::absolute(configLuaPath);
+		std::filesystem::path path = MakeRelativeToExe(configLuaPath);
 		if (!std::filesystem::exists(path)) return true;//nothing to load
 
 		LuaWrapper lw(mLogger, mCsv);
@@ -137,8 +159,8 @@ public:
 	}
 
 	bool SaveConfig() {
-		std::filesystem::path path = std::filesystem::absolute(configLuaPath);
-		std::filesystem::path corePath = std::filesystem::absolute(coreLuaPath);
+		std::filesystem::path path = MakeRelativeToExe(configLuaPath);
+		std::filesystem::path corePath = MakeRelativeToExe(coreLuaPath);
 
 		LuaWrapper lw(mLogger, mCsv);
 
@@ -245,8 +267,12 @@ public:
 
 int main(int argc, char* argv[]) {
 
-	if (argc < 2)return 0;
-	auto missionFilePath = std::string(argv[1]);
+	std::string missionFilePath;
+	if (argc < 2) {
+		std::cout << "Enter path to .miz file: ";
+		std::getline(std::cin,missionFilePath);
+	}
+	else missionFilePath = std::string(argv[1]);
 
 	MainContext mc;	
 	if(!mc.GetConfig()) return mc.onError("while loading config","",ErrorCodes::LOAD_CONFIG);
@@ -254,7 +280,7 @@ int main(int argc, char* argv[]) {
 
 	std::vector<std::string> luaOptions;
 	if(!mc.GetMainLuaOptions(luaOptions)||luaOptions.empty())return mc.onError("finding scripts","", ErrorCodes::FIND_SCRIPTS);
-	std::string luaFilepath = mainLuaDir + mc.GetFromList(luaOptions,"Select script file to run.");
+	std::string luaFilepath = mc.MakeRelativeToExe(mainLuaDir) .append( mc.GetFromList(luaOptions,"Select script file to run.")).string();
 
 
 	std::string missionFileContent;
@@ -268,7 +294,7 @@ int main(int argc, char* argv[]) {
 		if (!mc.LuaExtractScript(csvPath,luaFilepath, missionFileContent)) return mc.onError("while generating csv", "", ErrorCodes::SAVING_CSV);
 		if (!mc.ExecEditorAndWait(csvPath)) return mc.onError("launching editor", "", ErrorCodes::EDITING_CSV);
 
-		mc.Miz()->backupFile(missionFilePath);
+		mc.Miz()->backupFile(missionFilePath,mc.MakeRelativeToExe(backupsPath));
 		std::string newMissionFileContent;
 		if (!mc.LuaApplyScript(csvPath,luaFilepath, missionFileContent, newMissionFileContent)) return mc.onError("while updating mission data", "", ErrorCodes::UPDATING_MIZ);
 
