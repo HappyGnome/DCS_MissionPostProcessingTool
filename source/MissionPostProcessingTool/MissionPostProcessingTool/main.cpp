@@ -3,8 +3,7 @@
 #include <string>
 #include <fstream>
 
-//#include<windows.h>
-//#include<processthreadsapi.h>
+#include "conio.h"
 #include<shlwapi.h>
 #include<shlobj.h>
 
@@ -23,10 +22,23 @@ extern "C" {
 #include "LuaWrapper.h"
 #include "Logger.h"
 
-constexpr const char* mainLuaPath = "scripts\\main.lua";
+constexpr const char* mainLuaDir = ".\\scripts\\";
 constexpr const char* coreLuaPath = "scripts\\core\\core.lua";
 constexpr const char* inputCsvDir = "\\input\\";
 constexpr const char* configLuaPath = "config.lua";
+
+struct ErrorCodes {
+	static constexpr int LOAD_CONFIG = -1;
+	static constexpr int SAVE_CONFIG = -2;
+	static constexpr int EXTRACTING_MIZ = -3;
+	static constexpr int SAVING_MIZ = -4;
+	static constexpr int EXTRACTING_CSV = -5;
+	static constexpr int SAVING_CSV = -6;
+	static constexpr int UPDATING_MIZ = -7;
+	static constexpr int FIND_SCRIPTS = -8;
+	static constexpr int EDITING_CSV = -9;
+	static constexpr int UNKNOWN = -10;
+};
 
 class MainContext
 {
@@ -40,7 +52,7 @@ public:
 	std::shared_ptr <MizFileTools> Miz() const { return mMiz; }
 	std::shared_ptr <CsvFileTools> Csv() const { return mCsv; }
 
-	bool LuaApplyScript(const std::filesystem::path& csvPath, const std::string& missionData, std::string& newMissionData) const{
+	bool LuaApplyScript(const std::filesystem::path& csvPath, const std::filesystem::path& mainLuaPath, const std::string& missionData, std::string& newMissionData) const{
 
 		LuaWrapper lw(mLogger,mCsv);
 
@@ -55,7 +67,7 @@ public:
 		return lw.RunCsvHandler("applyCsv", std::filesystem::absolute(csvPath).string(), newMissionData);
 	}
 
-	bool LuaExtractScript(const std::filesystem::path& csvPath, const std::string& missionData) const{
+	bool LuaExtractScript(const std::filesystem::path& csvPath, const std::filesystem::path& mainLuaPath, const std::string& missionData) const{
 
 		LuaWrapper lw(mLogger,mCsv);
 
@@ -68,6 +80,19 @@ public:
 		if (!lw.RunFile(path.string())) return false;
 
 		return lw.RunCsvProducer("extractCsv", std::filesystem::absolute(csvPath).string());
+	}
+
+	bool GetMainLuaOptions(std::vector<std::string>& output) const {
+
+		std::filesystem::path dir = std::filesystem::relative(mainLuaDir);
+		if (!std::filesystem::exists(dir))return false;
+		for (const auto& it : std::filesystem::directory_iterator(dir)) {
+			const auto& path = it.path();
+			if (path.has_filename() && path.extension().string() == ".lua") {
+				output.push_back(path.filename().string());
+			}
+		}
+		return true;
 	}
 
 	bool CSVExists(const std::string& mizPath, std::filesystem::path& output) const{
@@ -153,7 +178,7 @@ public:
 		return false;
 	}
 
-	bool ExecEditorAndWait(std::filesystem::path csvPath) {
+	bool ExecEditorAndWait(const std::filesystem::path &csvPath) const{
 
 		std::string path = "\"" + csvPath.string() + "\"";
 		SHELLEXECUTEINFOA shellExecInfo;
@@ -196,6 +221,26 @@ public:
 		}
 		return true;
 	}
+
+	std::string GetFromList(const std::vector<std::string>& options, const std::string& prompt = "") {
+		if (options.size() == 0)return "";
+		else if (options.size() == 1)return options[0];
+
+		if(prompt != "") std::cout << prompt << " Use <Tab> to cycle: ";
+		int at = 0;
+		std::cout << options[at];
+		while (true) {
+			int c = _getch();
+			if (c == '\t') {
+				for (const char &c:options[at]) std::cout << "\b \b";
+				at = ++at % options.size();
+				std::cout << options[at];
+			}
+			if (c == 0) continue;
+			if (c == '\n' || c == '\r') break;
+		}
+		return options[at];
+	}
 };
 
 int main(int argc, char* argv[]) {
@@ -204,28 +249,33 @@ int main(int argc, char* argv[]) {
 	auto missionFilePath = std::string(argv[1]);
 
 	MainContext mc;	
-	if(!mc.GetConfig()) return mc.onError("while loading config","",-5);
-	if (!mc.SaveConfig()) return mc.onError("while saving config", "", -6);
+	if(!mc.GetConfig()) return mc.onError("while loading config","",ErrorCodes::LOAD_CONFIG);
+	if (!mc.SaveConfig()) return mc.onError("while saving config", "", ErrorCodes::SAVE_CONFIG);
+
+	std::vector<std::string> luaOptions;
+	if(!mc.GetMainLuaOptions(luaOptions)||luaOptions.empty())return mc.onError("finding scripts","", ErrorCodes::FIND_SCRIPTS);
+	std::string luaFilepath = mainLuaDir + mc.GetFromList(luaOptions,"Select script file to run.");
+
 
 	std::string missionFileContent;
 
 	try {
-		if (!mc.Miz()->extractMissionData(missionFilePath, missionFileContent)) return mc.onError("while extracting mission data", "", -1);
+		if (!mc.Miz()->extractMissionData(missionFilePath, missionFileContent)) return mc.onError("while extracting mission data", "", ErrorCodes::EXTRACTING_MIZ);
 
 		std::filesystem::path csvPath;
 		mc.CSVExists(missionFilePath, csvPath);//get csv file path (ignore whether it already exists)
 
-		if (!mc.LuaExtractScript(csvPath, missionFileContent)) return mc.onError("while generating csv", "", -2);
-		if (!mc.ExecEditorAndWait(csvPath)) return mc.onError("launching editor", "", -7);
+		if (!mc.LuaExtractScript(csvPath,luaFilepath, missionFileContent)) return mc.onError("while generating csv", "", ErrorCodes::SAVING_CSV);
+		if (!mc.ExecEditorAndWait(csvPath)) return mc.onError("launching editor", "", ErrorCodes::EDITING_CSV);
 
 		mc.Miz()->backupFile(missionFilePath);
 		std::string newMissionFileContent;
-		if (!mc.LuaApplyScript(csvPath, missionFileContent, newMissionFileContent)) return mc.onError("while updating mission data", "", -3);
+		if (!mc.LuaApplyScript(csvPath,luaFilepath, missionFileContent, newMissionFileContent)) return mc.onError("while updating mission data", "", ErrorCodes::UPDATING_MIZ);
 
-		if (!mc.Miz()->overwriteMissionData(missionFilePath, newMissionFileContent)) return mc.onError("while saving mission data", "", -4);
+		if (!mc.Miz()->overwriteMissionData(missionFilePath, newMissionFileContent)) return mc.onError("while saving mission data", "", ErrorCodes::SAVING_MIZ);
 	}
 	catch (std::exception ex){
-		return mc.onError("unexpectedly", ex.what(), -4);
+		return mc.onError("unexpectedly", ex.what(), ErrorCodes::UNKNOWN);
 	}
 
 	return 0;
