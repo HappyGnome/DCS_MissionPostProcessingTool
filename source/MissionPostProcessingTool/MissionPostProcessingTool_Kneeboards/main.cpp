@@ -26,7 +26,7 @@ extern "C" {
 constexpr const char* mainLuaDir = "scripts\\";
 constexpr const char* coreLuaPath = "scripts\\core\\core.lua";
 constexpr const char* inputCsvDir = "input\\";
-constexpr const char* configLuaPath = "config.lua";
+constexpr const char* configLuaPath = "config_kneeboard.lua";
 constexpr const char* backupsPath = "backups\\";
 
 struct ErrorCodes {
@@ -59,7 +59,7 @@ public:
 		GetModuleFileNameA(nullptr, buf, sizeof(buf));
 		std::filesystem::path exeDir(buf);
 		mExeDir = exeDir.remove_filename();
-		std::filesystem::path logPath = MakeRelativeToExe("MissionPostProcessingTool.log");
+		std::filesystem::path logPath = MakeRelativeToExe("MissionPostProcessingTool_Kneeboard.log");
 
 		mLogger = std::make_shared<Logger>(logPath.string());
 		mMiz = std::make_shared<MizFileTools>(mLogger);

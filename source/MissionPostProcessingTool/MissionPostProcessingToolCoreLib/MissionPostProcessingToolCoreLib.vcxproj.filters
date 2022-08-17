@@ -15,27 +15,30 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="main.h">
+    <ClInclude Include="Logger.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Config.h">
+    <ClInclude Include="LuaWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LuaCsvHelper.h">
+    <ClInclude Include="MizFileTools.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\MissionPostProcessingToolCoreLib\CsvFileTools.h">
+    <ClInclude Include="StringHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MissionPostProcessingToolCoreLib\CsvFileTools.cpp">
+    <ClCompile Include="LuaWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LuaCsvHelper.cpp">
+    <ClCompile Include="MizFileTools.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="StringHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

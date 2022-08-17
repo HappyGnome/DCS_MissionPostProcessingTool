@@ -1,4 +1,4 @@
-#include "LuaWrapper.h"
+#include "LuaCsvHelper.h"
 
 extern "C" {
 #include "lua.h"
@@ -12,46 +12,10 @@ extern "C" {
 #include "CsvFileTools.h"
 #include "StringHelpers.h"
 
-LuaWrapper::LuaWrapper(std::shared_ptr<Logger> logger, std::shared_ptr<CsvFileTools> csvt):mLogger(logger,"LUA"), mCsvTools(csvt) {
-	mL = lua_open();
+LuaCsvHelper::LuaCsvHelper(std::shared_ptr<Logger> logger, std::shared_ptr<CsvFileTools> csvt):LuaWrapper(logger), mCsvTools(csvt) {}
+LuaCsvHelper::~LuaCsvHelper() {}
 
-	luaopen_base(mL);
-	luaopen_table(mL);
-	luaopen_string(mL);
-	luaopen_math(mL);
-}
-LuaWrapper::~LuaWrapper() {
-	lua_close(mL);
-}
-lua_State* LuaWrapper::L() {
-	return mL;
-}
-
-void LuaWrapper::LogLuaError() {
-	if (lua_isstring(mL, -1)) {
-		const char* msg = lua_tostring(mL, -1);
-		lua_pop(mL, 1);
-		mLogger.Error(msg);
-	}
-}
-
-bool LuaWrapper::RunFile(const std::string& path) {
-	if (!luaL_dofile(mL, path.c_str())) return true;
-	else {
-		LogLuaError();
-		return false;
-	}
-}
-
-bool LuaWrapper::RunScript(const std::string& script) {
-	if (!luaL_dostring(mL, script.c_str()))return true;
-	else {
-		LogLuaError();
-		return false;
-	}
-}
-
-bool LuaWrapper::RunCsvProducer(const std::string& functionName, const std::string& outputPath) {
+bool LuaCsvHelper::RunCsvProducer(const std::string& functionName, const std::string& outputPath) {
 	lua_getfield(mL, LUA_GLOBALSINDEX, functionName.c_str());	
 	if (!lua_isfunction(mL, -1)) {
 		lua_pop(mL, 1);
@@ -66,7 +30,7 @@ bool LuaWrapper::RunCsvProducer(const std::string& functionName, const std::stri
 }
 
 //Call named global function accepting 2D table (csv data from a file), returning a string
-bool LuaWrapper::RunCsvHandler(const std::string& functionName, const std::string& csvPath, std::string& output) {
+bool LuaCsvHelper::RunCsvHandler(const std::string& functionName, const std::string& csvPath, std::string& output) {
 	lua_getfield(mL, LUA_GLOBALSINDEX, functionName.c_str());
 	if (!lua_isfunction(mL, -1)) {
 		lua_pop(mL, 1);
@@ -94,7 +58,7 @@ bool LuaWrapper::RunCsvHandler(const std::string& functionName, const std::strin
 }
 
 //pop 2D array from Lua and output to a csv file, overwriting existing content
-bool LuaWrapper::ExtractCsvContent(const std::string& filePath) {
+bool LuaCsvHelper::ExtractCsvContent(const std::string& filePath) {
 
 	std::string output = "";
 
@@ -127,7 +91,7 @@ bool LuaWrapper::ExtractCsvContent(const std::string& filePath) {
 	return true;
 }
 
-bool LuaWrapper::CsvFileToLua(const std::string& filePath) {
+bool LuaCsvHelper::CsvFileToLua(const std::string& filePath) {
 
 	std::ifstream csv(filePath);
 
