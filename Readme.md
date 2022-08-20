@@ -29,6 +29,7 @@ Simply drag and drop your .miz file onto `MissionPostProcessingTool_Kneeboards.e
 * **Clear** Any kneeboard in the miz file and not in the unpacked directory will be removed from the mission.
 
 In either case, `input\kneeboards\\<mission_filename>` will be synced up with the kneeboards in the mission file once the app runs successfully. Any files already in that directory will not be overwritten, so that changes to the unpacked images are applied to the mission file but not vice versa. 
+
 **N.B.** if the version of a kneeboard in the .miz file is newer than the unpacked version changes will be lost!
 
 Each time a .miz file is edited a backup will be created in the `backups` directory. Just in case your carefully created mission file gets corrupted during the process.
