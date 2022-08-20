@@ -18,11 +18,5 @@
     <ClCompile Include="MissionPostProcessingToolTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\MissionPostProcessingTool\CsvFileTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\MissionPostProcessingTool\MizFileTools.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

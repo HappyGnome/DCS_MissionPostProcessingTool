@@ -49,3 +49,20 @@ bool LuaWrapper::RunScript(const std::string& script) {
 		return false;
 	}
 }
+
+//Call named global function accepting 2D table (csv data from a file), returning a string
+bool LuaWrapper::GetGlobalFunction(const std::string& functionName) {
+	lua_getfield(mL, LUA_GLOBALSINDEX, functionName.c_str());
+	if (!lua_isfunction(mL, -1)) {
+		lua_pop(mL, 1);
+		return false;
+	}
+	return true;
+}
+bool  LuaWrapper::CallFunction(int argc, int retc) {
+	if (lua_pcall(mL, argc,retc, 0)) {
+		LogLuaError();
+		return false;
+	}
+	return true;
+}

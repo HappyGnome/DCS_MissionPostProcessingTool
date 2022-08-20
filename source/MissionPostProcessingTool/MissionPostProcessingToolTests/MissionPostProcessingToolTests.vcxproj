@@ -116,7 +116,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\MissionPostProcessingTool;$(SolutionDir)\..\Lua515\include;$(SolutionDir)\..\LibZip\x64-$(Configuration)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\MissionPostProcessingToolCoreLib;$(SolutionDir)\..\Lua515\include;$(SolutionDir)\..\LibZip\x64-$(Configuration)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -124,8 +124,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>zip.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\Lua515\lib\$(Configuration)\;$(SolutionDir)\..\LibZip\x64-$(Configuration)\lib\;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>zip.lib;lua.lib;MissionPostProcessingToolCoreLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\$(Platform)\$(Configuration)\;$(SolutionDir)\..\Lua515\lib\$(Configuration)\;$(SolutionDir)\..\LibZip\x64-$(Configuration)\lib\;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,7 +136,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\MissionPostProcessingTool;$(SolutionDir)\..\Lua515\include;$(SolutionDir)\..\LibZip\x64-$(Configuration)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\MissionPostProcessingToolCoreLib;$(SolutionDir)\..\Lua515\include;$(SolutionDir)\..\LibZip\x64-$(Configuration)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -151,9 +151,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\MissionPostProcessingTool\CsvFileTools.cpp" />
-    <ClCompile Include="..\MissionPostProcessingTool\MizFileTools.cpp" />
     <ClCompile Include="MissionPostProcessingToolTests.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MissionPostProcessingToolCoreLib\MissionPostProcessingToolCoreLib.vcxproj">
+      <Project>{dc842c2a-3b67-40f7-b581-d242c2736e95}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -29,6 +29,8 @@ public:
 
 	bool RunFile(const std::string& filePath);
 	bool RunScript(const std::string& script);
+	bool GetGlobalFunction(const std::string& functionName);
+	bool CallFunction(int argc,int retc);
 
 	template<typename T>
 	bool ReadFromTable(std::map<std::string, T, std::less<std::string>>& output) { return false; }

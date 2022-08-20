@@ -31,21 +31,14 @@ bool LuaCsvHelper::RunCsvProducer(const std::string& functionName, const std::st
 
 //Call named global function accepting 2D table (csv data from a file), returning a string
 bool LuaCsvHelper::RunCsvHandler(const std::string& functionName, const std::string& csvPath, std::string& output) {
-	lua_getfield(mL, LUA_GLOBALSINDEX, functionName.c_str());
-	if (!lua_isfunction(mL, -1)) {
-		lua_pop(mL, 1);
-		return false;
-	}
+	if (!GetGlobalFunction(functionName)) return false;
 	if (!CsvFileToLua(csvPath))
 	{
 		lua_pop(mL, 1);
 		return false;
 	}
-	if (lua_pcall(mL, 1, 1, 0)) {
-		LogLuaError();
-		return false;
-	}
-	
+	if (!CallFunction(1,1)) return false;
+
 	if (!lua_isstring(mL, -1)) {
 		lua_pop(mL, 1);
 		return false;

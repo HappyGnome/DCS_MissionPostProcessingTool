@@ -18,14 +18,13 @@ extern "C" {
 #include "main.h"
 
 #include "Config.h"
-#include "CsvFileTools.h"
 #include "MizFileTools.h"
-#include "LuaCsvHelper.h"
+#include "LuaWrapper.h"
 #include "Logger.h"
 
-constexpr const char* mainLuaDir = "scripts\\";
 constexpr const char* coreLuaPath = "scripts\\core\\core.lua";
-constexpr const char* inputCsvDir = "input\\";
+constexpr const char* kneeboardLuaPath = "scripts\\kneeboards\\getAirframes.lua";
+constexpr const char* inputKneeboardDir = "input\\kneeboards";
 constexpr const char* configLuaPath = "config_kneeboard.lua";
 constexpr const char* backupsPath = "backups\\";
 
@@ -34,11 +33,11 @@ struct ErrorCodes {
 	static constexpr int SAVE_CONFIG = -2;
 	static constexpr int EXTRACTING_MIZ = -3;
 	static constexpr int SAVING_MIZ = -4;
-	static constexpr int EXTRACTING_CSV = -5;
-	static constexpr int SAVING_CSV = -6;
+	static constexpr int EXTRACTING_AIRFRAMES = -5;
+	static constexpr int EXTRACTING_DIRECTORIES = -6;
+	static constexpr int SYNCING_KNEEBOARDS = -9;
 	static constexpr int UPDATING_MIZ = -7;
 	static constexpr int FIND_SCRIPTS = -8;
-	static constexpr int EDITING_CSV = -9;
 	static constexpr int UNKNOWN = -10;
 };
 
@@ -46,13 +45,11 @@ class MainContext
 {
 	std::shared_ptr<Logger> mLogger;
 	std::shared_ptr <MizFileTools> mMiz;
-	std::shared_ptr <CsvFileTools> mCsv;
 	std::filesystem::path mExeDir;
 	AppConfig mConfig;
 public:	
 
 	std::shared_ptr <MizFileTools> Miz() const { return mMiz; }
-	std::shared_ptr <CsvFileTools> Csv() const { return mCsv; }
 
 	MainContext() {
 		char buf[1024];
@@ -63,7 +60,6 @@ public:
 
 		mLogger = std::make_shared<Logger>(logPath.string());
 		mMiz = std::make_shared<MizFileTools>(mLogger);
-		mCsv = std::make_shared<CsvFileTools>(mLogger);
 	}
 
 	void MakeRelativeToExe(std::filesystem::path& path) const{
@@ -75,60 +71,56 @@ public:
 		auto ret = std::filesystem::path(mExeDir);
 		return ret.append(path);
 	}
-	bool LuaApplyScript(const std::filesystem::path& csvPath, const std::filesystem::path& mainLuaPath, const std::string& missionData, std::string& newMissionData) const{
+	
+	bool GetClientAirframeTypes(const std::string& missionData, std::vector<std::string>& output) const {
 
-		LuaCsvHelper lw(mLogger,mCsv);
+		LuaWrapper lw(mLogger);
 
-		std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
-		std::filesystem::path corePath = MakeRelativeToExe(coreLuaPath);
+		std::filesystem::path luaPath = MakeRelativeToExe(kneeboardLuaPath);
 
 		lw.RunScript(missionData);//add mission global object
 
-		if (!lw.RunFile(corePath.string())) return false;
-		if (!lw.RunFile(path.string())) return false;
+		if (!lw.RunFile(luaPath.string())) return false;
 
-		return lw.RunCsvHandler("applyCsv", std::filesystem::absolute(csvPath).string(), newMissionData);
-	}
-
-	bool LuaExtractScript(const std::filesystem::path& csvPath, const std::filesystem::path& mainLuaPath, const std::string& missionData) const{
-
-		LuaCsvHelper lw(mLogger,mCsv);
-
-		std::filesystem::path path = std::filesystem::absolute(mainLuaPath);
-		std::filesystem::path corePath = MakeRelativeToExe(coreLuaPath);
-
-		lw.RunScript(missionData); //add mission global object
-
-		if (!lw.RunFile(corePath.string())) return false;
-		if (!lw.RunFile(path.string())) return false;
-
-		return lw.RunCsvProducer("extractCsv", std::filesystem::path(csvPath).string());
-	}
-
-	bool GetMainLuaOptions(std::vector<std::string>& output) const {
-
-		std::filesystem::path dir = MakeRelativeToExe(mainLuaDir);
-		if (!std::filesystem::exists(dir))return false;
-		for (const auto& it : std::filesystem::directory_iterator(dir)) {
-			const auto& path = it.path();
-			if (path.has_filename() && path.extension().string() == ".lua") {
-				output.push_back(path.filename().string());
+		if (!lw.GetGlobalFunction("clientAirframeList")) return false;
+		if (!lw.CallFunction(0,1)) return false;
+		if (std::map<std::string, bool> map; lw.ReadFromTable<bool>(map)) {
+			output.clear();
+			for (auto it = map.cbegin(); it != map.cend(); ++it) {
+				output.push_back(it->first);
 			}
+			return true;
+		}
+		else return false;
+	}
+
+	bool EnsureMissionKneeboardFolders(const std::string& missionFileName, const std::vector<std::string>& airframeNames, std::filesystem::path &mizKbDir) const {
+		
+		mizKbDir = MakeRelativeToExe(inputKneeboardDir)/std::filesystem::path(missionFileName).filename();
+		if (!std::filesystem::exists(mizKbDir)) std::filesystem::create_directories(mizKbDir);
+
+		std::filesystem::create_directories(mizKbDir / "IMAGES");
+
+		for (const std::filesystem::path& it : airframeNames) {
+			if (std::filesystem::path(it).has_parent_path()) continue;
+			std::filesystem::create_directories(mizKbDir / it / "IMAGES");
 		}
 		return true;
 	}
 
-	bool CSVExists(const std::string& mizPath, std::filesystem::path& output) const{
-		auto inputPath = std::filesystem::path(mizPath);
+	bool SyncKneeboards(const std::string& missionFileName, const std::filesystem::path& kneeboardsPath, bool clearKneeboards) const{
+		bool success = true;
+		std::string kbMizpath = "KNEEBOARD";
+		if (clearKneeboards) success &= mMiz->clearDirInMiz(missionFileName, kbMizpath);
 
-		output = MakeRelativeToExe(inputCsvDir);
+		std::vector<std::string> extensions = { ".jpg",".jpeg", ".png" };
 
-		if (!std::filesystem::exists(output)) std::filesystem::create_directory(output);
+		for (const auto& e : extensions) {
+			success &= mMiz->packFilesInMiz(missionFileName, kbMizpath, kneeboardsPath, e);
+		}
 
-		output += inputPath.stem();
-		output += ".csv";
-
-		return std::filesystem::exists(output);
+		success &= mMiz->unpackFilesInMiz(missionFileName, kbMizpath, kneeboardsPath);
+		return success;
 	}
 
 	int OnError(const std::string& failedAction, const std::string& toLog, int code) const{
@@ -146,7 +138,7 @@ public:
 		std::filesystem::path path = MakeRelativeToExe(configLuaPath);
 		if (!std::filesystem::exists(path)) return true;//nothing to load
 
-		LuaCsvHelper lw(mLogger, mCsv);
+		LuaWrapper lw(mLogger);
 
 		if (!lw.RunFile(path.string())) return false;
 
@@ -162,7 +154,7 @@ public:
 		std::filesystem::path path = MakeRelativeToExe(configLuaPath);
 		std::filesystem::path corePath = MakeRelativeToExe(coreLuaPath);
 
-		LuaCsvHelper lw(mLogger, mCsv);
+		LuaWrapper lw(mLogger);
 
 		if (!lw.RunFile(corePath.string())) return false;
 
@@ -188,10 +180,10 @@ public:
 
 			std::ofstream csv(path, std::ios_base::trunc);
 
-			if (!csv.good()) return false;
+			/*if (!csv.good()) return false;
 			csv << "-- REMINDER: Use lua escape sequences in string variables!" << std::endl
 				<< "--           e.g. [\"" << AppConfig::EditorExePath_key << "\"] = \"C:\\MyApp.exe\"    -- Bad" << std::endl
-				<< "--                [\"" << AppConfig::EditorExePath_key << "\"] = \"C:\\\\MyApp.exe\"   -- OK" << std::endl;
+				<< "--                [\"" << AppConfig::EditorExePath_key << "\"] = \"C:\\\\MyApp.exe\"   -- OK" << std::endl;*/
 			csv << fileContent;
 			return true;
 		}
@@ -200,61 +192,17 @@ public:
 		return false;
 	}
 
-	bool ExecEditorAndWait(const std::filesystem::path &csvPath) const{
-
-		std::string path = "\"" + csvPath.string() + "\"";
-		SHELLEXECUTEINFOA shellExecInfo;
-
-		if (mConfig.EditorExePath == "") {//default editor
-			
-			
-			ZeroMemory(&shellExecInfo, sizeof(shellExecInfo));
-			shellExecInfo.cbSize = sizeof(SHELLEXECUTEINFOA);
-			shellExecInfo.lpFile = LPCSTR(path.c_str());
-			shellExecInfo.nShow = SW_MAXIMIZE;
-			shellExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-			if (!ShellExecuteExA(&shellExecInfo)) {
-				mLogger->Error("ShellExec error code: " + std::to_string(GetLastError()));
-				return false;
-			}
-			if (shellExecInfo.hProcess != nullptr)
-			{
-				WaitForSingleObject(shellExecInfo.hProcess, INFINITE);
-				CloseHandle(shellExecInfo.hProcess);
-			}
-		}
-		else {
-			std::string editorPath = "\"" + mConfig.EditorExePath + "\"";
-			ZeroMemory(&shellExecInfo, sizeof(shellExecInfo));
-			shellExecInfo.cbSize = sizeof(SHELLEXECUTEINFOA);
-			shellExecInfo.lpFile = LPCSTR(editorPath.c_str());
-			shellExecInfo.lpParameters = LPCSTR(path.c_str());
-			shellExecInfo.nShow = SW_MAXIMIZE;
-			shellExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-			if (!ShellExecuteExA(&shellExecInfo)) {
-				mLogger->Error("ShellExec error code: " + std::to_string(GetLastError()));
-				return false;
-			}
-			if (shellExecInfo.hProcess != nullptr)
-			{
-				WaitForSingleObject(shellExecInfo.hProcess, INFINITE);
-				CloseHandle(shellExecInfo.hProcess);
-			}
-		}
-		return true;
-	}
-
 	std::string GetFromList(const std::vector<std::string>& options, const std::string& prompt = "") {
 		if (options.size() == 0)return "";
 		else if (options.size() == 1)return options[0];
 
-		if(prompt != "") std::cout << prompt << " Use <Tab> to cycle: ";
+		if (prompt != "") std::cout << prompt << " Use <Tab> to cycle: ";
 		int at = 0;
 		std::cout << options[at];
 		while (true) {
 			int c = _getch();
 			if (c == '\t') {
-				for (const char &c:options[at]) std::cout << "\b \b";
+				for (const char& c : options[at]) std::cout << "\b \b";
 				at = ++at % options.size();
 				std::cout << options[at];
 			}
@@ -280,27 +228,24 @@ int main(int argc, char* argv[]) {
 	if(!mc.GetConfig()) return mc.OnError("while loading config","",ErrorCodes::LOAD_CONFIG);
 	if (!mc.SaveConfig()) return mc.OnError("while saving config", "", ErrorCodes::SAVE_CONFIG);
 
-	std::vector<std::string> luaOptions;
-	if(!mc.GetMainLuaOptions(luaOptions)||luaOptions.empty())return mc.OnError("finding scripts","", ErrorCodes::FIND_SCRIPTS);
-	std::string luaFilepath = mc.MakeRelativeToExe(mainLuaDir) .append( mc.GetFromList(luaOptions,"Select script file to run.")).string();
-
 
 	std::string missionFileContent;
 
 	try {
 		if (!mc.Miz()->extractMissionData(missionFilePath, missionFileContent)) return mc.OnError("while extracting mission data", "", ErrorCodes::EXTRACTING_MIZ);
 
-		std::filesystem::path csvPath;
-		mc.CSVExists(missionFilePath, csvPath);//get csv file path (ignore whether it already exists)
+		std::vector<std::string> airframes;
+		std::filesystem::path mizKbDir;
 
-		if (!mc.LuaExtractScript(csvPath,luaFilepath, missionFileContent)) return mc.OnError("while generating csv", "", ErrorCodes::SAVING_CSV);
-		if (!mc.ExecEditorAndWait(csvPath)) return mc.OnError("launching editor", "", ErrorCodes::EDITING_CSV);
+		if(!mc.GetClientAirframeTypes(missionFileContent, airframes)) return mc.OnError("while extracting airframe list", "", ErrorCodes::EXTRACTING_AIRFRAMES);
+		if(!mc.EnsureMissionKneeboardFolders(missionFilePath,airframes,mizKbDir)) return mc.OnError("while creating directories", "", ErrorCodes::EXTRACTING_DIRECTORIES);
 
 		mc.Miz()->backupFile(missionFilePath,mc.MakeRelativeToExe(backupsPath));
-		std::string newMissionFileContent;
-		if (!mc.LuaApplyScript(csvPath,luaFilepath, missionFileContent, newMissionFileContent)) return mc.OnError("while updating mission data", "", ErrorCodes::UPDATING_MIZ);
 
-		if (!mc.Miz()->overwriteMissionData(missionFilePath, newMissionFileContent)) return mc.OnError("while saving mission data", "", ErrorCodes::SAVING_MIZ);
+		bool cleanSync = mc.GetFromList({ "Keep","Clear" }, "Clear kneeboards from miz before sync?") == "Clear";
+		if (!mc.SyncKneeboards(missionFilePath,mizKbDir,cleanSync))return mc.OnError("while syncing kneeboards", "", ErrorCodes::SYNCING_KNEEBOARDS);
+		
+
 	}
 	catch (std::exception ex){
 		return mc.OnError("unexpectedly", ex.what(), ErrorCodes::UNKNOWN);

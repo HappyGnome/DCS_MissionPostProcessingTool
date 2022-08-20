@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "Logger.h"
 #include "CsvFileTools.h"
 #include "MizFileTools.h"
 
@@ -23,9 +24,45 @@ bool CSVTest2() {
     return ok;
 }
 
+bool UnpackTest1() {
+    bool ok = true;
+    
+    auto logger = std::make_shared<Logger>("Log.log");
+    auto miz = MizFileTools(logger);
+
+    miz.unpackFilesInMiz("Test.zip", "", "TestUnpack",true);
+
+    return ok;
+}
+
+bool PackTest1() {
+    bool ok = true;
+
+    auto logger = std::make_shared<Logger>("Log.log");
+    auto miz = MizFileTools(logger);
+
+    miz.packFilesInMiz("Test.zip", "", "TestUnpack", ".txt");
+
+    return ok;
+}
+
+bool DelTest1() {
+    bool ok = true;
+
+    auto logger = std::make_shared<Logger>("Log.log");
+    auto miz = MizFileTools(logger);
+
+    miz.clearDirInMiz("Test.zip", "Foo");
+
+    return ok;
+}
+
 int main() {
     CSVTest1();
     CSVTest2();
+    //UnpackTest1();
+    //PackTest1();
+    DelTest1();
     return 1;
 }
 
