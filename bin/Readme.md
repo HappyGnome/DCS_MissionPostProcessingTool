@@ -47,3 +47,7 @@ This tool will automatically create directories for all client airframes detecte
 
 ## Configuration
 Use `config_kneeboard.lua` to override the csv editor to open, and possibly other options in future.
+
+# MissionPostProcessingToolMizDiff
+
+Experimental app for testing/debugging the other tools. Pass it two .miz files to output 'diff.lua' to highlight what changed between the two missions.
