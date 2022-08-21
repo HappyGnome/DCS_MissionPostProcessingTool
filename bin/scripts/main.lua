@@ -37,12 +37,12 @@ extractCsv = function()
 	local once = {}
 	for coaK,coaV in pairs(mission.coalition) do
 		for ctryI,ctryV in ipairs(coaV.country) do
-			if ctryV.plane then
+			if ctryV.plane and ctryV.plane.group then
 				for gpI,gpV in ipairs(ctryV.plane.group) do
 					appendRadioChannelsRow(ret,gpV, ctryV.name, once)
 				end
 			end
-			if ctryV.helicopter then
+			if ctryV.helicopter and ctryV.helicopter.group then
 				for gpI,gpV in ipairs(ctryV.helicopter.group) do
 					appendRadioChannelsRow(ret,gpV, ctryV.name, once)
 				end
@@ -54,20 +54,22 @@ end
 
 ------------------------------------------
 appendRadioChannelsRow = function(csvData,group, ctryName, once)
-	for unitI,unitV in ipairs(group.units) do
-		if unitV.skill == "Client" or unitV.skill == "Player" and unitV.Radio then
-			for radioI,radioV in ipairs(unitV.Radio) do
-				local row = {ctryName,unitV.type,radioI}
-				
-				if not once[row[1]] then once[row[1]] ={} end
-				if not once[row[1]][row[2]] then once[row[1]][row[2]] ={} end
-				
-				if not once[row[1]][row[2]][row[3]] then
-					for channelI,channelV in ipairs(radioV.channels) do
-						row[#row + 1] = channelV
+	if group and group.units then 
+		for unitI,unitV in ipairs(group.units) do
+			if (unitV.skill == "Client" or unitV.skill == "Player") and unitV.Radio then
+				for radioI,radioV in ipairs(unitV.Radio) do
+					local row = {ctryName,unitV.type,radioI}
+					
+					if not once[row[1]] then once[row[1]] ={} end
+					if not once[row[1]][row[2]] then once[row[1]][row[2]] ={} end
+					
+					if not once[row[1]][row[2]][row[3]] and radioV.channels then
+						for channelI,channelV in ipairs(radioV.channels) do
+							row[#row + 1] = channelV
+						end
+						csvData[#csvData + 1] = row;
+						once[row[1]][row[2]][row[3]] = true
 					end
-					csvData[#csvData + 1] = row;
-					once[row[1]][row[2]][row[3]] = true
 				end
 			end
 		end
@@ -79,12 +81,12 @@ applyRadioChannelsRow = function(ctryName,typeName,radioNumber, channels)
 	for coaK,coaV in pairs(mission.coalition) do
 		for ctryI,ctryV in ipairs(coaV.country) do
 			if ctryV.name == ctryName then
-				if ctryV.plane then
+				if ctryV.plane and ctryV.plane.group then
 					for gpI,gpV in ipairs(ctryV.plane.group) do
 						applyRadioChannelsRowToGroup(gpV,typeName,radioNumber, channels)
 					end
 				end
-				if ctryV.helicopter then
+				if ctryV.helicopter and ctryV.helicopter.group then
 					for gpI,gpV in ipairs(ctryV.helicopter.group) do
 						applyRadioChannelsRowToGroup(gpV,typeName,radioNumber, channels)
 					end
@@ -95,11 +97,13 @@ applyRadioChannelsRow = function(ctryName,typeName,radioNumber, channels)
 end
 
 applyRadioChannelsRowToGroup = function(group,typeName,radioNumber, channels)
-	for unitI,unitV in ipairs(group.units) do
-		if unitV.type == typeName and (unitV.skill == "Client" or unitV.skill == "Player") then
-			for i,v in ipairs(channels) do
-				unitV.Radio[radioNumber].channels[i] = v
-			end			
+	if group.units then 
+		for unitI,unitV in ipairs(group.units) do
+			if unitV.type == typeName and (unitV.skill == "Client" or unitV.skill == "Player") then
+				for i,v in ipairs(channels) do
+					unitV.Radio[radioNumber].channels[i] = v
+				end			
+			end
 		end
 	end
 end

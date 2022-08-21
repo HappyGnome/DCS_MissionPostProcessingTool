@@ -12,3 +12,7 @@ source/MissionPostProcessingTool/MissionPostProcessingTool/backups
 source/MissionPostProcessingTool/MissionPostProcessingTool/input
 **.log
 releases
+*.bkp0
+*.csv
+/bin/config.lua
+*.zip
