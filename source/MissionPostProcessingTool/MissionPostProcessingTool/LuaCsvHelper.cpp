@@ -108,8 +108,8 @@ bool LuaCsvHelper::CsvFileToLua(const std::string& filePath) {
 
 			if (s.literal) lua_pushstring(mL, str);
 			else if (str_helpers::TryAToNil(str)) lua_pushnil(mL);
-			else if (int val; str_helpers::TryAToI(str, val)) lua_pushinteger(mL,val);
-			else if (float f; str_helpers::TryAToF(str, f)) lua_pushnumber(mL, f);
+			else if (int val; str_helpers::TryAToI(str, val)) lua_pushinteger(mL, val);
+			else if (double f; str_helpers::TryAToD(str, f)) lua_pushnumber(mL, f);
 			else if (int b; str_helpers::TryAToB(str,b))lua_pushboolean(mL, b);
 			else lua_pushstring(mL, str);
 

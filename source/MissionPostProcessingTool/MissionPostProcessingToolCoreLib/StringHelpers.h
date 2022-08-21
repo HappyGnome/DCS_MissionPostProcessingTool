@@ -3,7 +3,7 @@
 
 namespace str_helpers {
 
-	bool TryAToF(const char* a, float& out);
+	bool TryAToD(const char* a, double& out);
 
 	bool TryAToI(const char* a, int& out);
 

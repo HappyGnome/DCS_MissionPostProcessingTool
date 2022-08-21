@@ -4,9 +4,9 @@
 
 #include "StringHelpers.h"
 
-bool str_helpers::TryAToF(const char* a, float& out) {
+bool str_helpers::TryAToD(const char* a, double& out) {
 	char* pEnd;
-	out = std::strtof(a, &pEnd);
+	out = std::strtod(a, &pEnd);
 	return *pEnd == '\0';
 }
 
