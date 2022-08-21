@@ -49,3 +49,32 @@ core.luaObjToLuaString = function(t,name,indent)
 	
 	return res
 end
+
+core._doLuaDiff = function(o1,o2, key, tOut)
+	if type(o1) ~= type(o2) then
+		tOut[key] = "type"
+	elseif type(o1) ==  "table" then
+		local d = {}
+		
+		for k,v in pairs(o1) do
+			core._doLuaDiff(v,o2[k],k,d)
+		end
+		for k,v in pairs(o2) do
+			if o1[k] == nil then
+				d[k] = "type"
+			end
+		end
+		
+		if next(d) ~= nil then
+			tOut[key] = d
+		end
+	elseif o1 ~= o2 then
+		tOut[key] = "value"
+	end
+end
+
+core.luaDiff = function(o1,o2)
+	local res = {}
+	core._doLuaDiff(o1,o2,"diff",res)
+	return core.luaObjToLuaString(res,"diff","")
+end

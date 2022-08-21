@@ -14,6 +14,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MissionPostProcessingToolCo
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MissionPostProcessingTool_Kneeboards", "MissionPostProcessingTool_Kneeboards\MissionPostProcessingTool_Kneeboards.vcxproj", "{54CB5F63-86FE-443D-BCDD-8BB2D438AD5A}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MissionPostProcessingToolMizDiff", "MissionPostProcessingToolMizDiff\MissionPostProcessingToolMizDiff.vcxproj", "{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -54,6 +56,14 @@ Global
 		{54CB5F63-86FE-443D-BCDD-8BB2D438AD5A}.Release|x64.Build.0 = Release|x64
 		{54CB5F63-86FE-443D-BCDD-8BB2D438AD5A}.Release|x86.ActiveCfg = Release|Win32
 		{54CB5F63-86FE-443D-BCDD-8BB2D438AD5A}.Release|x86.Build.0 = Release|Win32
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Debug|x64.ActiveCfg = Debug|x64
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Debug|x64.Build.0 = Debug|x64
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Debug|x86.ActiveCfg = Debug|Win32
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Debug|x86.Build.0 = Debug|Win32
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Release|x64.ActiveCfg = Release|x64
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Release|x64.Build.0 = Release|x64
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Release|x86.ActiveCfg = Release|Win32
+		{9917C67F-F3A0-44D7-A4B0-E18D3EFF579E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
