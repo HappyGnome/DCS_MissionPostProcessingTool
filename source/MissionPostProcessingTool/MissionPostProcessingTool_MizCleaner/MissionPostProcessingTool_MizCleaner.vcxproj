@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
+    <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{eff67252-9f12-4b3d-8b23-ce0d74ee168f}</ProjectGuid>
-    <RootNamespace>MissionPostProcessingTests</RootNamespace>
+    <ProjectGuid>{77b2e609-fa8f-4f7f-af58-eebb8fe78b45}</ProjectGuid>
+    <RootNamespace>MissionPostProcessingToolMizCleaner</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -70,18 +70,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -117,15 +105,13 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)\MissionPostProcessingToolCoreLib;$(SolutionDir)\..\Lua515\include;$(SolutionDir)\..\LibZip\x64-$(Configuration)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>zip.lib;lua.lib;MissionPostProcessingToolCoreLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\$(Platform)\$(Configuration)\;$(SolutionDir)\..\Lua515\lib\$(Configuration)\;$(SolutionDir)\..\LibZip\x64-$(Configuration)\lib\;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\$(Platform)\$(Configuration);$(SolutionDir)\..\Lua515\lib\$(Configuration)\;$(SolutionDir)\..\LibZip\$(Platform)-$(Configuration)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MissionPostProcessingToolCoreLib.lib;zip.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -137,8 +123,6 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)\MissionPostProcessingToolCoreLib;$(SolutionDir)\..\Lua515\include;$(SolutionDir)\..\LibZip\x64-$(Configuration)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -146,17 +130,15 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>zip.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\..\Lua515\lib\$(Configuration)\;$(SolutionDir)\..\LibZip\x64-$(Configuration)\lib\;</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\$(Platform)\$(Configuration);$(SolutionDir)\..\Lua515\lib\$(Configuration)\;$(SolutionDir)\..\LibZip\$(Platform)-$(Configuration)\lib\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MissionPostProcessingToolCoreLib.lib;zip.lib;lua.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="MissionPostProcessingToolTests.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MissionPostProcessingToolCoreLib\MissionPostProcessingToolCoreLib.vcxproj">
-      <Project>{dc842c2a-3b67-40f7-b581-d242c2736e95}</Project>
-    </ProjectReference>
+    <None Include="Readme.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -16,3 +16,5 @@ releases
 *.csv
 /bin/config.lua
 *.zip
+/bin/backups
+/bin
